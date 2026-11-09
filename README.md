@@ -1,6 +1,7 @@
 # TP2 – Procesamiento de Imágenes
 
 **Integrantes:** Victoria Marull, Inés Medina y Paz Sevilla 
+
 Trabajo Práctico N° 2: detección y clasificación de monedas y dados (Problema 1) y detección de patentes con segmentación de caracteres (Problema 2).
 
 ---
