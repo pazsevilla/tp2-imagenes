@@ -118,6 +118,53 @@ def segmentar_caracteres(gris, patente, solo_letras):
 
 
 # =====================================================================
+# Paso 6: enderezar la patente (homografía)
+# =====================================================================
+
+def enderezar_patente(img, mascara_car, caracteres, origen, alto_letra):
+    """Toma 4 esquinas a partir del primer y el último caracter, calcula la
+    homografía que las lleva a un rectángulo y endereza la patente."""
+    x0, y0 = origen
+    m = int(0.4 * alto_letra)     # margen alrededor de los caracteres
+
+    primero, ultimo = caracteres[0], caracteres[-1]
+    # Esquinas en la imagen original: sup-izq, sup-der, inf-der, inf-izq
+    origen_pts = np.float32([
+        [x0 + primero[0] - m,             y0 + primero[1] - m],
+        [x0 + ultimo[0] + ultimo[2] + m,  y0 + ultimo[1] - m],
+        [x0 + ultimo[0] + ultimo[2] + m,  y0 + ultimo[1] + ultimo[3] + m],
+        [x0 + primero[0] - m,             y0 + primero[1] + primero[3] + m],
+    ])
+
+    # Rectángulo destino: mismo ancho y alto que la patente, agrandado x4
+    ESCALA = 4
+    ancho = int(np.linalg.norm(origen_pts[1] - origen_pts[0])) * ESCALA
+    alto = int(np.linalg.norm(origen_pts[3] - origen_pts[0])) * ESCALA
+    destino_pts = np.float32([[0, 0], [ancho, 0], [ancho, alto], [0, alto]])
+
+    H, _ = cv2.findHomography(origen_pts, destino_pts)
+    patente_recta = cv2.warpPerspective(img, H, (ancho, alto))
+
+    # Cajas de los caracteres: transformamos sus 4 esquinas con la misma H y las dibujamos en rojo
+    for cx, cy, cw, ch, _ in caracteres:
+        esquinas = np.float32([
+            [x0 + cx,      y0 + cy],
+            [x0 + cx + cw, y0 + cy],
+            [x0 + cx + cw, y0 + cy + ch],
+            [x0 + cx,      y0 + cy + ch],
+        ]).reshape(-1, 1, 2)
+        esquinas_rectas = cv2.perspectiveTransform(esquinas, H)
+        cv2.polylines(patente_recta, [np.int32(esquinas_rectas)], True, (0, 0, 255), 2)
+
+    # La máscara de caracteres está en coordenadas del recorte: la pasamos a la imagen completa
+    mascara_img = np.zeros(img.shape[:2], np.uint8)
+    mascara_img[y0:y0 + mascara_car.shape[0], x0:x0 + mascara_car.shape[1]] = mascara_car
+    mascara_recta = cv2.warpPerspective(mascara_img, H, (ancho, alto), flags=cv2.INTER_NEAREST)
+
+    return patente_recta, mascara_recta
+
+
+# =====================================================================
 # Procesar una imagen completa (Parte A + Parte B) y mostrar sus etapas
 # =====================================================================
 
@@ -186,7 +233,10 @@ def procesar(nombre):
         ay0 = (y0 + cy - ry0) * ESCALA
         cv2.rectangle(resumen, (ax0, ay0), (ax0 + cw * ESCALA, ay0 + ch * ESCALA), (0, 0, 255), 2)
 
-    return resumen, len(caracteres), vis, mascara_car, umbral_b
+    # Paso 6: enderezar la patente con una homografía
+    patente_recta, mascara_recta = enderezar_patente(img, mascara_car, caracteres, (x0, y0), alto_letra)
+
+    return resumen, len(caracteres), vis, mascara_car, umbral_b, patente_recta, mascara_recta
 
 
 # =====================================================================
@@ -195,13 +245,13 @@ def procesar(nombre):
 resultados = []
 for k in range(1, 13):
     nombre = f'img{k:02d}.png'
-    resumen, n_car, vis, mascara_car, umbral_b = procesar(nombre)
-    resultados.append((nombre, resumen, n_car, vis, mascara_car, umbral_b))
+    resumen, n_car, vis, mascara_car, umbral_b, patente_recta, mascara_recta = procesar(nombre)
+    resultados.append((nombre, resumen, n_car, vis, mascara_car, umbral_b, patente_recta, mascara_recta))
 
 # Resumen: las 12 patentes recortadas con sus caracteres
 detectadas = sum(1 for r in resultados if r[2] == 6)
 plt.figure(figsize=(16, 9))
-for k, (nombre, resumen, n_car, _, _, umbral_b) in enumerate(resultados, start=1):
+for k, (nombre, resumen, n_car, _, _, umbral_b, _, _) in enumerate(resultados, start=1):
     plt.subplot(3, 4, k)
     plt.imshow(cv2.cvtColor(resumen, cv2.COLOR_BGR2RGB))
     plt.title(f'{nombre[:-4]}: {n_car} caracteres (T={umbral_b})', fontsize=11)
@@ -212,7 +262,7 @@ plt.show()
 
 # Figura final: recorte de cada patente y su máscara de caracteres
 plt.figure(figsize=(18, 10))
-for k, (nombre, _, n_car, vis, mascara_car, _) in enumerate(resultados):
+for k, (nombre, _, n_car, vis, mascara_car, _, _, _) in enumerate(resultados):
     plt.subplot(4, 6, 2 * k + 1)
     plt.imshow(cv2.cvtColor(vis, cv2.COLOR_BGR2RGB))
     plt.title(f'{nombre}: recorte', fontsize=9)
@@ -222,5 +272,20 @@ for k, (nombre, _, n_car, vis, mascara_car, _) in enumerate(resultados):
     plt.title(f'{nombre}: máscara ({n_car} caracteres)', fontsize=9)
     plt.axis('off')
 plt.suptitle('Patentes recortadas y caracteres segmentados')
+plt.tight_layout()
+plt.show()
+
+# Figura: patentes enderezadas con homografía y su máscara
+plt.figure(figsize=(18, 10))
+for k, (nombre, _, _, _, _, _, patente_recta, mascara_recta) in enumerate(resultados):
+    plt.subplot(4, 6, 2 * k + 1)
+    plt.imshow(cv2.cvtColor(patente_recta, cv2.COLOR_BGR2RGB))
+    plt.title(f'{nombre}: enderezada', fontsize=9)
+    plt.axis('off')
+    plt.subplot(4, 6, 2 * k + 2)
+    plt.imshow(mascara_recta, cmap='gray')
+    plt.title(f'{nombre}: máscara enderezada', fontsize=9)
+    plt.axis('off')
+plt.suptitle('Patentes enderezadas con homografía (findHomography + warpPerspective)')
 plt.tight_layout()
 plt.show()
