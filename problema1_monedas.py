@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-# ---------- Función auxiliar para mostrar imágenes ----------
+# Función para mostrar imágenes 
 def imshow(img, title=None, color_img=False):
     plt.figure(figsize=(10, 7))
     if color_img:
@@ -13,7 +13,7 @@ def imshow(img, title=None, color_img=False):
     plt.axis('off')
     plt.show()
 
-# ---------- Paso 1: cargar la imagen ----------
+# cargar la imagen
 img = cv2.imread('monedas.jpg')
 print('Tamaño de la imagen (alto, ancho, canales):', img.shape)
 imshow(img, 'Imagen original', color_img=True)
@@ -21,19 +21,19 @@ imshow(img, 'Imagen original', color_img=True)
 gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 imshow(gris, 'Escala de grises')
 
-# ---------- Paso 2a: intento con umbral global (Otsu) ----------
+# intento con umbral global (Otsu) 
 # Lo dejamos para mostrar por qué NO sirve con fondo no uniforme
 _, otsu = cv2.threshold(gris, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 imshow(otsu, 'Umbral de Otsu: falla por el fondo no uniforme')
 
-# ---------- Paso 2b: suavizado + bordes con Canny ----------
+# Paso 2b: suavizado + bordes con Canny 
 suave = cv2.GaussianBlur(gris, (9, 9), 0)
 imshow(suave, 'Suavizado Gaussiano 9x9')
 
 bordes = cv2.Canny(suave, 30, 90) #si es menor a 40 se descarta
 imshow(bordes, 'Bordes con Canny')
 
-# ---------- Funciones de la U6: reconstrucción y rellenado de huecos ----------
+#  reconstrucción y rellenado de huecos
 def imreconstruct(marker, mask, kernel=np.ones((3, 3), np.uint8)):
     while True:
         expanded = cv2.dilate(marker, kernel)
@@ -50,29 +50,29 @@ def imfillhole(img):
     img_r = imreconstruct(marker, img_c)
     return cv2.bitwise_not(img_r)
 
-# ---------- Paso 3a: dilatar los bordes para cerrar cortes ----------
+#  dilatar los bordes para cerrar cortes   
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (41, 41))
 bordes_dil = cv2.dilate(bordes, kernel)
 imshow(bordes_dil, 'Bordes dilatados (kernel elíptico 55x55)')
 
-# ---------- Paso 3b: rellenar huecos ----------
+# rellenar huecos 
 relleno = imfillhole(bordes_dil)
 imshow(relleno, 'Huecos rellenos')
 
-# ---------- Paso 3c: erosionar para devolver el tamaño real ----------
+# erosionar para devolver el tamaño real 
 mascara = cv2.erode(relleno, kernel)
 imshow(mascara, 'Máscara final (erosionada)')
 
-# ---------- Paso 3c bis: apertura para alisar bordes y limpiar ----------
+# Paso 3c bis: apertura para alisar bordes y limpiar 
 kernel_ap = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (71, 71))
 mascara = cv2.morphologyEx(mascara, cv2.MORPH_OPEN, kernel_ap)
 imshow(mascara, 'Apertura (bordes alisados)')
 
-# ---------- Paso 3d: contar objetos ----------
+# contar objetos
 n, etiquetas, stats, centroides = cv2.connectedComponentsWithStats(mascara)
 print('Cantidad de objetos detectados:', n - 1)
 
-# ---------- Paso 4: factor de forma para separar monedas de dados ----------
+# factor de forma para separar monedas de dados
 UMBRAL_RHO = 0.85
 
 monedas = []   # guardamos la etiqueta y el área de cada moneda
@@ -105,7 +105,7 @@ for i in range(1, n):   # arrancamos en 1 porque 0 es el fondo
 print(f'\nTotal: {len(monedas)} monedas y {len(dados)} dados')
 imshow(resultado, 'Monedas (azul) y dados (rojo)', color_img=True)
 
-# ---------- Paso 5: clasificar monedas por área ----------
+# clasificar monedas por área 
 UMBRAL_10C = 75000     # menor a esto: 10 centavos
 UMBRAL_1P = 93000      # entre los dos umbrales: 1 peso; mayor: 50 centavos
 
@@ -138,7 +138,7 @@ print(f'  Total: {sum(conteo.values())} monedas = ${total:.2f}')
 
 imshow(clasificadas, 'Clasificación de monedas', color_img=True)
 
-# ---------- Paso 6: contar los puntos de la cara superior de cada dado ----------
+# contar los puntos de la cara superior de cada dado
 AREA_MIN_PUNTO = 1000
 RHO_MIN_PUNTO = 0.8
 

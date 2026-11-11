@@ -14,9 +14,8 @@ def imshow(img, title=None, color_img=False):
 
 RUTA = 'Patentes/Patentes/'   # carpeta donde están img01.png ... img12.png
 
-# =====================================================================
+
 # Funciones de la Parte A
-# =====================================================================
 
 def candidatos_letras(gris, umbral):
     """Pasos 1b a 1e: umbral, componentes conexas, filtro por área y por aspecto."""
@@ -64,9 +63,9 @@ def detectar_patente(gris):
     return umbral_5
 
 
-# =====================================================================
+
 # Funciones de la Parte B
-# =====================================================================
+
 
 def segmentar_caracteres(gris, patente, solo_letras):
     """Paso 4: recorta la patente con margen, busca el umbral que da 6 caracteres
@@ -94,10 +93,10 @@ def segmentar_caracteres(gris, patente, solo_letras):
         if len(caracteres) == 6:
             break
 
-    # 4d: ordenar de izquierda a derecha
+    # ordenar de izquierda a derecha
     caracteres.sort(key=lambda c: c[0])
 
-    # 4e: si un caracter es más alto de lo normal, recortarlo a la altura de su vecino
+    # si un caracter es más alto de lo normal, recortarlo a la altura de su vecino
     for k, c in enumerate(caracteres):
         if c[3] > 1.2 * alto_letra:
             vecino = caracteres[k + 1] if k + 1 < len(caracteres) else caracteres[k - 1]
@@ -108,7 +107,7 @@ def segmentar_caracteres(gris, patente, solo_letras):
             ys, xs = np.nonzero(mascara_c)
             c[:4] = [xs.min(), ys.min(), xs.max() - xs.min() + 1, ys.max() - ys.min() + 1]
 
-    # 4f: máscara con solo los caracteres (cada uno limitado a su caja)
+    #  máscara con solo los caracteres (cada uno limitado a su caja)
     mascara_car = np.zeros_like(recorte)
     for cx, cy, cw, ch, i in caracteres:
         caja = etiq_r[cy:cy + ch, cx:cx + cw] == i
@@ -117,9 +116,7 @@ def segmentar_caracteres(gris, patente, solo_letras):
     return recorte, bin_rec, umbral_b, caracteres, (x0, y0), alto_letra, mascara_car
 
 
-# =====================================================================
-# Paso 6: enderezar la patente (homografía)
-# =====================================================================
+# enderezar la patente (homografía)
 
 def enderezar_patente(img, mascara_car, caracteres, origen, alto_letra):
     """Toma 4 esquinas a partir del primer y el último caracter, calcula la
@@ -164,9 +161,7 @@ def enderezar_patente(img, mascara_car, caracteres, origen, alto_letra):
     return patente_recta, mascara_recta
 
 
-# =====================================================================
 # Procesar una imagen completa (Parte A + Parte B) y mostrar sus etapas
-# =====================================================================
 
 def procesar(nombre):
     img = cv2.imread(RUTA + nombre)
@@ -233,15 +228,15 @@ def procesar(nombre):
         ay0 = (y0 + cy - ry0) * ESCALA
         cv2.rectangle(resumen, (ax0, ay0), (ax0 + cw * ESCALA, ay0 + ch * ESCALA), (0, 0, 255), 2)
 
-    # Paso 6: enderezar la patente con una homografía
+    # enderezar la patente con una homografía
     patente_recta, mascara_recta = enderezar_patente(img, mascara_car, caracteres, (x0, y0), alto_letra)
 
     return resumen, len(caracteres), vis, mascara_car, umbral_b, patente_recta, mascara_recta
 
 
-# =====================================================================
-# Paso 5: correr las 12 imágenes
-# =====================================================================
+
+# correr las 12 imágenes
+
 resultados = []
 for k in range(1, 13):
     nombre = f'img{k:02d}.png'
