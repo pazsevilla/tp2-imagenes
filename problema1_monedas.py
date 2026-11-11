@@ -26,7 +26,7 @@ imshow(gris, 'Escala de grises')
 _, otsu = cv2.threshold(gris, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 imshow(otsu, 'Umbral de Otsu: falla por el fondo no uniforme')
 
-# Paso 2b: suavizado + bordes con Canny 
+# Passuavizado + bordes con Canny 
 suave = cv2.GaussianBlur(gris, (9, 9), 0)
 imshow(suave, 'Suavizado Gaussiano 9x9')
 
@@ -63,7 +63,7 @@ imshow(relleno, 'Huecos rellenos')
 mascara = cv2.erode(relleno, kernel)
 imshow(mascara, 'Máscara final (erosionada)')
 
-# Paso 3c bis: apertura para alisar bordes y limpiar 
+# apertura para alisar bordes y limpiar 
 kernel_ap = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (71, 71))
 mascara = cv2.morphologyEx(mascara, cv2.MORPH_OPEN, kernel_ap)
 imshow(mascara, 'Apertura (bordes alisados)')
@@ -148,17 +148,17 @@ suma_dados = 0
 for d, i in enumerate(dados, start=1):
     x, y, w, h = stats[i, :4]
 
-    # 6a: recortar el dado y blanquear lo que está fuera de su máscara
+    # recortar el dado y blanquear lo que está fuera de su máscara
     recorte = gris[y:y + h, x:x + w].copy()
     mascara_dado = (etiquetas[y:y + h, x:x + w] == i)
     recorte[~mascara_dado] = 255
     imshow(recorte, f'Dado {d}: recorte')
 
-    # 6b: Otsu invertido (puntos negros -> blancos)
+    # Otsu invertido (puntos negros -> blancos)
     _, puntos_bin = cv2.threshold(recorte, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     imshow(puntos_bin, f'Dado {d}: umbral de Otsu invertido')
 
-    # 6c: componentes conexas y filtro por área y factor de forma
+    # componentes conexas y filtro por área y factor de forma
     n_p, etiq_p, stats_p, _ = cv2.connectedComponentsWithStats(puntos_bin)
     valor = 0
     for j in range(1, n_p):

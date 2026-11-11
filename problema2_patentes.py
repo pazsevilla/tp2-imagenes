@@ -180,7 +180,7 @@ def procesar(nombre):
     for cx, cy, cw, ch, _ in caracteres:
         cv2.rectangle(vis, (cx, cy), (cx + cw - 1, cy + ch - 1), (0, 255, 0), 1)
 
-    # 4g: patente final = caja que encierra los caracteres (coordenadas de la imagen original)
+    # patente final = caja que encierra los caracteres (coordenadas de la imagen original)
     px0 = x0 + min(c[0] for c in caracteres)
     py0 = y0 + min(c[1] for c in caracteres)
     px1 = x0 + max(c[0] + c[2] for c in caracteres)
