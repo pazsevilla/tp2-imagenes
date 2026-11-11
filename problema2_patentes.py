@@ -72,16 +72,16 @@ def segmentar_caracteres(gris, patente, solo_letras):
     y corrige los que salen más altos de lo normal (pedazo de marco)."""
     x, y, w, h = patente
 
-    # 4a: altura típica de una letra (mediana de las letras halladas en la Parte A)
+    # altura típica de una letra (mediana de las letras halladas en la Parte A)
     _, _, stats_l, _ = cv2.connectedComponentsWithStats(solo_letras, connectivity=8)
     alto_letra = np.median(stats_l[1:, 3])
 
-    # 4b: recortar la patente con margen (una letra a los costados)
+    # recortar la patente con margen (una letra a los costados)
     mx, my = int(alto_letra), int(0.4 * alto_letra)
     x0, y0 = max(0, x - mx), max(0, y - my)
     recorte = gris[y0:y + h + my, x0:x + w + mx]
 
-    # 4c: barrido de umbrales dentro del recorte hasta encontrar 6 caracteres
+    # barrido de umbrales dentro del recorte hasta encontrar 6 caracteres
     for umbral_b in range(60, 220, 5):
         _, bin_rec = cv2.threshold(recorte, umbral_b, 255, cv2.THRESH_BINARY)
         n_r, etiq_r, stats_r, _ = cv2.connectedComponentsWithStats(bin_rec, connectivity=8)
